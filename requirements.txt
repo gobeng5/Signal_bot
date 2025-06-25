@@ -1,5 +1,5 @@
 flask
 websocket-client
-pandas
-ta-lib
 requests
+pandas
+numpy
