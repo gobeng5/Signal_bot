@@ -1,5 +1,7 @@
-flask
-websocket-client
+Flask
 requests
+websocket-client
+ta
 pandas
 numpy
+python-telegram-bot==13.15
