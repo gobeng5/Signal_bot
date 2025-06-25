@@ -1,4 +1,7 @@
-import websocket, json, time
+import websocket
+import json
+import time
+import pandas as pd
 
 SYMBOLS = {
     "Volatility 10 Index": "R_10",
@@ -6,19 +9,31 @@ SYMBOLS = {
     "Volatility 75 Index": "R_75"
 }
 
+def fetch_ohlc(symbol):
+    ws = websocket.create_connection("wss://ws.derivws.com/websockets/v3?app_id=1089")
+    request = {
+        "candles": symbol,
+        "count": 100,
+        "granularity": 60
+    }
+    ws.send(json.dumps(request))
+    response = json.loads(ws.recv())
+    ws.close()
+    if response.get("error"):
+        print(f"❌ Failed to fetch OHLC data: {response}")
+        return None
+    candles = response.get("candles", [])
+    return pd.DataFrame(candles)
+
 def get_prices():
-    prices = []
+    price_data = []
     for name, symbol in SYMBOLS.items():
-        ws = websocket.create_connection("wss://ws.derivws.com/websockets/v3?app_id=1089")
-        req = {"ticks_history": symbol, "adjust_start_time": 1, "count": 100, "granularity": 60, "style": "candles"}
-        ws.send(json.dumps(req))
-        res = json.loads(ws.recv())
-        if "candles" in res:
-            prices.append({
+        df = fetch_ohlc(symbol)
+        if df is not None:
+            price_data.append({
                 "instrument": name,
                 "symbol": symbol,
-                "ohlc": res["candles"]
+                "ohlc": df
             })
-        ws.close()
         time.sleep(1)
-    return prices
+    return price_data
