@@ -1,49 +1,30 @@
 import pandas as pd
-import talib
-
-def detect_candlestick_patterns(df):
-    patterns = {
-        "Hammer": talib.CDLHAMMER,
-        "Doji": talib.CDLDOJI,
-        "Engulfing": talib.CDLENGULFING,
-        "Morning Star": talib.CDLMORNINGSTAR
-    }
-    results = []
-    for name, func in patterns.items():
-        out = func(df["open"], df["high"], df["low"], df["close"])
-        if out.iloc[-1] != 0:
-            results.append(name)
-    return results
-
-def detect_chart_pattern(df):
-    recent_highs = df["high"].rolling(window=5).max()
-    recent_lows = df["low"].rolling(window=5).min()
-    if df["high"].iloc[-1] >= recent_highs.iloc[-1]:
-        return "Possible Breakout"
-    elif df["low"].iloc[-1] <= recent_lows.iloc[-1]:
-        return "Possible Breakdown"
-    return None
+import numpy as np
+from pattern_recognition import detect_candlestick_patterns, detect_chart_patterns
 
 def generate_signals(price_data):
     signals = []
-    for instrument in price_data:
-        try:
-            df = pd.DataFrame(instrument["ohlc"])
-            df = df.astype(float)
+    for item in price_data:
+        df = item.get("ohlc")
+        if df is None or "close" not in df:
+            continue
 
-            candlestick_patterns = detect_candlestick_patterns(df)
-            chart_pattern = detect_chart_pattern(df)
+        instrument = item["instrument"]
+        df["returns"] = df["close"].pct_change()
+        df["ma_20"] = df["close"].rolling(window=20).mean()
 
+        candle_patterns = detect_candlestick_patterns(df)
+        chart_patterns = detect_chart_patterns(df)
+
+        for pattern in candle_patterns + chart_patterns:
             signal = {
-                "instrument": instrument["instrument"],
-                "type": "pattern_analysis",
-                "patterns": candlestick_patterns,
-                "chart_pattern": chart_pattern,
-                "confidence": 0.85,
-                "entry": df["close"].iloc[-1],
-                "exit": df["close"].iloc[-1] * 1.02
+                "instrument": instrument,
+                "type": "pattern",
+                "pattern": pattern["pattern"],
+                "confidence": pattern["confidence"],
+                "entry": pattern["entry"],
+                "exit": pattern["exit"]
             }
             signals.append(signal)
-        except Exception as e:
-            print("Error processing:", instrument["instrument"], e)
+
     return signals
