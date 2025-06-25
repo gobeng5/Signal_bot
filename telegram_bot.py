@@ -1,21 +1,35 @@
-import requests, os
+import requests
+import os
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 def send_top_signal(signal):
     if not TOKEN or not CHAT_ID:
-        print("Missing token or chat ID")
+        print("❌ Telegram token or chat ID not set.")
         return
+
     msg = (
-        f"📈 Signal Alert\n\n"
-        f"Instrument: {signal.get('instrument')}\n"
-        f"Patterns: {', '.join(signal.get('patterns', []))}\n"
-        f"Chart Pattern: {signal.get('chart_pattern')}\n"
-        f"Confidence: {signal.get('confidence')*100:.1f}%\n"
-        f"Entry: {signal.get('entry')}\n"
-        f"Exit: {signal.get('exit')}"
+        f"📈 *Signal Alert*
+
+"
+        f"Instrument: {signal['instrument']}
+"
+        f"Pattern: {signal.get('pattern', 'N/A')}
+"
+        f"Confidence: {signal['confidence'] * 100:.1f}%
+"
+        f"Entry: {signal['entry']}
+"
+        f"Exit: {signal['exit']}"
     )
+
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    data = {"chat_id": CHAT_ID, "text": msg, "parse_mode": "Markdown"}
-    requests.post(url, data=data)
+    data = {
+        "chat_id": CHAT_ID,
+        "text": msg,
+        "parse_mode": "Markdown"
+    }
+
+    res = requests.post(url, data=data)
+    print(f"Telegram response: {res.status_code} - {res.text}")
